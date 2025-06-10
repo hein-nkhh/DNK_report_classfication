@@ -140,7 +140,7 @@ def main():
     # Khởi tạo tokenizer và dataloader
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     train_loader = DataLoader(
-        MyDataset(train_data, tokenizer, mode='train'),
+        MyDataset(train_data, tokenizer, mode='train', use_augmenter=False),
         batch_size=BATCH_SIZE,
         shuffle=True,
         generator=g

@@ -4,3 +4,4 @@ pytorch-metric-learning
 scikit-learn 
 tqdm 
 numpy
+nlpaug

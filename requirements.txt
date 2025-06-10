@@ -5,3 +5,4 @@ scikit-learn
 tqdm 
 numpy
 nlpaug
+deep-translator

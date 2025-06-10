@@ -2,39 +2,36 @@ import json
 import re
 import torch
 from torch.utils.data import Dataset
+from deep_translator import GoogleTranslator
 import nlpaug.augmenter.word as naw
 import random
 random.seed(42)
 
-def create_german_augmenter():
-    return naw.ContextualWordEmbsAug(
-        model_path='deepset/gbert-base',
-        action='substitute',
-        aug_p=0.3,
-        aug_min=1,
-        aug_max=3,
-        top_k=50,
-        stopwords=['.', ',', ';', ':', '?', '!', '-', '„', '“'],
-        stopwords_regex=r'^[^\wäöüßÄÖÜ]+$',  # bỏ dấu không phải từ
-        device='cuda'  # hoặc 'cpu' nếu không có GPU
-    )
-
-def augment_german_sentence(sentence, augmenter, max_attempts=5):
-    for _ in range(max_attempts):
-        augmented = augmenter.augment(sentence)
-        # Nếu không có thay đổi hoặc có dấu thay từ, bỏ
-        if (augmented != sentence and
-            len(set(augmented.split()) ^ set(sentence.split())) >= 1 and
-            all(c.isalpha() or c.isspace() for c in augmented.replace('äöüßÄÖÜ', ''))):
-            return augmented
-    return None  # không có kết quả tốt
+def back_translate_german(paragraph, intermediate_lang='en', max_attempts=3):
+    try:
+        for _ in range(max_attempts):
+            # Translate from German to intermediate language (e.g., English)
+            translator_to_intermediate = GoogleTranslator(source='de', target=intermediate_lang)
+            intermediate_text = translator_to_intermediate.translate(paragraph)
+            
+            if not intermediate_text:
+                continue
+                
+            # Translate back to German
+            translator_to_german = GoogleTranslator(source=intermediate_lang, target='de')
+            back_translated = translator_to_german.translate(intermediate_text)
+            
+            return back_translated
+    except Exception as e:
+        print(f"Translation failed: {e}")
+        return None
 
 class MyDataset(Dataset):
     def __init__(self, data, tokenizer, mode, n_aug=1, use_augmenter=False):
         self.data = data
         self.tokenizer = tokenizer
         self.mode = mode
-        self.augmenter = create_german_augmenter() if (mode == 'train' and use_augmenter) else None
+        self.use_augmenter = use_augmenter and mode == 'train'
         
         if self.mode == 'train' and self.augmenter:
             augmented_data = []
@@ -44,16 +41,16 @@ class MyDataset(Dataset):
                 text = re.sub(r"\s+", " ", context + target).strip()
 
                 for _ in range(n_aug):
-                    aug_text = augment_german_sentence(text, self.augmenter)
-                    if aug_text:
-                        # Tạo sample mới giống sample gốc nhưng thay 'context' và 'target'
+                    # Use back-translation
+                    aug_text = back_translate_german(text, intermediate_lang='en')
+                    if aug_text and aug_text != text:
                         new_sample = sample.copy()
-                        # Bạn có thể chọn cách cắt ngược lại context + target nếu muốn, ở đây đơn giản hóa:
                         new_sample["context"] = [aug_text]
                         new_sample["target"] = ""
                         augmented_data.append(new_sample)
             
             # Gộp dữ liệu gốc và augmented
+            print(f"Added {len(augmented_data)} augmented samples")
             self.data.extend(augmented_data)
             random.shuffle(self.data)
     def __len__(self):

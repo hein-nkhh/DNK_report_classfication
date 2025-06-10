@@ -31,9 +31,66 @@ NUM_CLASSES = 20
 LAMBDA_CONTRASTIVE = 0.1
 PATIENCE = 4
 
+def evaluate(model, val_loader, criterion_ce, device):
+    model.eval()
+    total_loss = 0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for batch in val_loader:
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['label'].to(device)
+
+            embeddings, logits = model(input_ids, attention_mask)
+            loss = criterion_ce(logits, labels)
+            total_loss += loss.item()
+
+            preds = torch.argmax(logits, dim=1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    avg_loss = total_loss / len(val_loader)
+    accuracy = correct / total
+
+    return avg_loss, accuracy
+
+class EarlyStopping:
+    def __init__(self, patience=5, min_delta=0):
+        """
+        Args:
+            patience (int): Số epoch chờ validation loss không cải thiện để dừng training
+            min_delta (float): Giá trị tối thiểu để coi là cải thiện
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_loss = None
+        self.counter = 0
+        self.early_stop = False
+
+    def __call__(self, val_loss):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+            return False
+
+        elif val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            return False
+
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+            return self.early_stop
+
 def train_model(model, train_loader, val_loader, criterion_ce, criterion_contrastive, optimizer, scheduler, epochs, patience):
-    best_val_f1 = 0
-    patience_counter = 0
+    
+    best_val_loss = float('inf')
+    best_acc = 0
+    early_stop_counter = 0
+    early_stopping = EarlyStopping(patience=5, min_delta=0.001)
     best_model_path = "best_model.pth"
 
     for epoch in range(epochs):
@@ -59,43 +116,20 @@ def train_model(model, train_loader, val_loader, criterion_ce, criterion_contras
         print(f"Epoch {epoch+1}, Train Loss: {avg_train_loss:.4f}")
 
         # Validation
-        model.eval()
-        val_preds, val_labels = [], []
-        val_loss = 0
-        with torch.no_grad():
-            for batch in tqdm(val_loader, desc="Validating"):
-                input_ids = batch['input_ids'].to(DEVICE)
-                attention_mask = batch['attention_mask'].to(DEVICE)
-                labels = batch['label'].to(DEVICE)
+        val_loss, val_acc = evaluate(model, val_loader, criterion_ce, DEVICE)
+        print(f"Validation Loss: {val_loss:.4f}, Accuracy: {val_acc:.4f}")
+        scheduler.step(val_acc)
 
-                embeddings, logits = model(input_ids, attention_mask)
-                loss_ce = criterion_ce(logits, labels)
-                loss_contrastive = criterion_contrastive(embeddings, labels)
-                loss = loss_ce + LAMBDA_CONTRASTIVE * loss_contrastive
-                val_loss += loss.item()
-
-                preds = torch.argmax(logits, dim=1).cpu().numpy()
-                val_preds.extend(preds)
-                val_labels.extend(labels.cpu().numpy())
-
-        avg_val_loss = val_loss / len(val_loader)
-        val_f1 = f1_score(val_labels, val_preds, average='macro')
-        print(f"Epoch {epoch+1}, Val Loss: {avg_val_loss:.4f}, Val F1: {val_f1:.4f}")
-
-        scheduler.step(avg_val_loss)
-
-        if val_f1 > best_val_f1:
-            best_val_f1 = val_f1
-            patience_counter = 0
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             torch.save(model.state_dict(), best_model_path)
-            print(f"New best model saved with F1: {best_val_f1:.4f}")
-        else:
-            patience_counter += 1
-            if patience_counter >= patience:
-                print(f"Early stopping at epoch {epoch+1}")
-                break
+            print("✅ Saved best model")
 
-    print(f"Training completed. Best Val F1: {best_val_f1:.4f}")
+        if early_stopping(val_loss):
+            print("⏹️ Early stopping triggered.")
+            break
+
+    print(f"Training completed. Best Val loss: {best_val_loss:.4f}")
     return best_model_path
 
 def main():

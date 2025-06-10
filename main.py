@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 import random
 import os
+import argparse
 from src.dataset import MyDataset, load_jsonl
 from src.model import OpinionBERTWithContrastive
 
@@ -133,6 +134,10 @@ def train_model(model, train_loader, val_loader, criterion_ce, criterion_contras
     return best_model_path
 
 def main():
+    parser = argparse.ArgumentParser(description="Train OpinionBERT with contrastive loss")
+    parser.add_argument('--use_augmenter', action='store_true', help="Enable data augmentation")
+    args = parser.parse_args()
+    
     # Load dữ liệu
     train_data = load_jsonl('data/training_data.jsonl')
     val_data = load_jsonl('data/development_data.jsonl')
@@ -140,7 +145,7 @@ def main():
     # Khởi tạo tokenizer và dataloader
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     train_loader = DataLoader(
-        MyDataset(train_data, tokenizer, mode='train', use_augmenter=False),
+        MyDataset(train_data, tokenizer, mode='train', use_augmenter=args.use_augmenter),
         batch_size=BATCH_SIZE,
         shuffle=True,
         generator=g

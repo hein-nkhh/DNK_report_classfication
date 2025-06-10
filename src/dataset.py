@@ -33,7 +33,7 @@ class MyDataset(Dataset):
         self.mode = mode
         self.use_augmenter = use_augmenter and mode == 'train'
         
-        if self.mode == 'train' and self.augmenter:
+        if self.mode == 'train' and self.use_augmenter:
             augmented_data = []
             for sample in data:
                 context = " ".join(sample["context"])

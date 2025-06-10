@@ -1,1 +1,6 @@
-torch transformers pytorch-metric-learning scikit-learn tqdm numpy
+torch 
+transformers 
+pytorch-metric-learning 
+scikit-learn 
+tqdm 
+numpy

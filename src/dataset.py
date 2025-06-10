@@ -57,12 +57,12 @@ class MyDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        if self.mode in ['train', 'val']:
+        if self.mode in ['train', 'val', 'test']:
             context = " ".join(self.data[idx]["context"])
             target = self.data[idx]["target"]
             text = context + target
             text = re.sub(r"\s+", " ", text).strip()
-            if self.mode == 'train':
+            if self.mode in ['train', 'val']:
                 label = int(self.data[idx]["task_a_label"]) - 1
 
                 encodings = self.tokenizer(

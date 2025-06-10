@@ -54,13 +54,13 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     
     val_loader = DataLoader(
-        MyDataset(val_data, tokenizer, mode='val'),  # Sử dụng mode='val' vì giống định dạng
+        MyDataset(val_data, tokenizer, mode='test'),
         batch_size=BATCH_SIZE,
         shuffle=False
     )
     # Khởi tạo dataloader
     test_loader = DataLoader(
-        MyDataset(test_data, tokenizer, mode='val'),  # Sử dụng mode='val' vì giống định dạng
+        MyDataset(test_data, tokenizer, mode='test'),
         batch_size=BATCH_SIZE,
         shuffle=False
     )

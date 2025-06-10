@@ -65,22 +65,35 @@ class MyDataset(Dataset):
             target = self.data[idx]["target"]
             text = context + target
             text = re.sub(r"\s+", " ", text).strip()
-            
-        label = int(self.data[idx]["task_a_label"]) - 1
-        
-        encodings = self.tokenizer(
-            text,
-            max_length=512,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt'
-        )
+            if self.mode == 'train':
+                label = int(self.data[idx]["task_a_label"]) - 1
 
-        return {
-            'input_ids': encodings['input_ids'].flatten(),
-            'attention_mask': encodings['attention_mask'].flatten(),
-            'label': torch.tensor(label, dtype=torch.long)
-        }
+                encodings = self.tokenizer(
+                    text,
+                    max_length=512,
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+        
+                return {
+                    'input_ids': encodings['input_ids'].flatten(),
+                    'attention_mask': encodings['attention_mask'].flatten(),
+                    'label': torch.tensor(label, dtype=torch.long)
+                }
+            else:  # 'val'
+                encodings = self.tokenizer(
+                    text,
+                    max_length=512,
+                    padding='max_length',
+                    truncation=True,
+                    return_tensors='pt'
+                )
+        
+                return {
+                    'input_ids': encodings['input_ids'].flatten(),
+                    'attention_mask': encodings['attention_mask'].flatten()
+                }
 
 def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:

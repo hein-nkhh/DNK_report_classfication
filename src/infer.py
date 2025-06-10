@@ -13,8 +13,8 @@ MAX_LEN = 512
 NUM_CLASSES = 20
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_PATH = "best_model.pth"
-TEST_DATA_PATH = "E:\Project\SustainEval2025\DNK_report_classfication\data\evaluation_data.jsonl"
-VAL_DATA_PATH = "E:\Project\SustainEval2025\DNK_report_classfication\data\validation_data.jsonl"
+VAL_DATA_PATH = "data/validation_data.jsonl"
+TEST_DATA_PATH = "data/evaluation_data.jsonl"
 OUTPUT_PATH_VAL = "prediction_task_a_val.jsonl"
 OUTPUT_PATH_TEST = "prediction_task_a.jsonl"
 

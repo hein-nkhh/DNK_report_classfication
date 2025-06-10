@@ -13,8 +13,10 @@ MAX_LEN = 512
 NUM_CLASSES = 20
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_PATH = "best_model.pth"
-TEST_DATA_PATH = "data/test_data.jsonl"
-OUTPUT_PATH = "predictions.jsonl"
+TEST_DATA_PATH = "E:\Project\SustainEval2025\DNK_report_classfication\data\evaluation_data.jsonl"
+VAL_DATA_PATH = "E:\Project\SustainEval2025\DNK_report_classfication\data\validation_data.jsonl"
+OUTPUT_PATH_VAL = "prediction_task_a_val.jsonl"
+OUTPUT_PATH_TEST = "prediction_task_a.jsonl"
 
 def predict(model, test_loader, tokenizer):
     model.eval()
@@ -45,11 +47,17 @@ def save_predictions(data, predictions, output_path):
 
 def main():
     # Load dữ liệu test
+    val_data = load_jsonl(VAL_DATA_PATH)
     test_data = load_jsonl(TEST_DATA_PATH)
     
     # Khởi tạo tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     
+    val_loader = DataLoader(
+        MyDataset(val_data, tokenizer, mode='val'),  # Sử dụng mode='val' vì giống định dạng
+        batch_size=BATCH_SIZE,
+        shuffle=False
+    )
     # Khởi tạo dataloader
     test_loader = DataLoader(
         MyDataset(test_data, tokenizer, mode='val'),  # Sử dụng mode='val' vì giống định dạng
@@ -68,11 +76,15 @@ def main():
     print(f"Loaded model from {MODEL_PATH}")
     
     # Dự đoán
-    predictions = predict(model, test_loader, tokenizer)
+    predictions_val = predict(model, val_loader, tokenizer)
+    predictions_test = predict(model, test_loader, tokenizer)
     
     # Lưu kết quả
-    save_predictions(test_data, predictions, OUTPUT_PATH)
-    print(f"Predictions saved to {OUTPUT_PATH}")
+    save_predictions(test_data, predictions_test, OUTPUT_PATH_TEST)
+    print(f"predictions test saved to {OUTPUT_PATH_TEST}")
+    
+    save_predictions(val_data, predictions_val, OUTPUT_PATH_VAL)
+    print(f"predictions validation saved to {OUTPUT_PATH_VAL}")
 
 if __name__ == "__main__":
     main()

@@ -7,8 +7,8 @@ from tqdm import tqdm
 import numpy as np
 import random
 import os
-from dataset import MyDataset, load_jsonl
-from model import OpinionBERTWithContrastive
+from src.dataset import MyDataset, load_jsonl
+from src.model import OpinionBERTWithContrastive
 
 # Thiết lập seed
 SEED = 42

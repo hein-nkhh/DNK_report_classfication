@@ -10,16 +10,8 @@ import os
 import argparse
 from src.dataset import MyDataset, load_jsonl
 from src.model import OpinionBERTWithContrastive
+import argparse
 
-# Thiết lập seed
-SEED = 42
-torch.manual_seed(SEED)
-random.seed(SEED)
-np.random.seed(SEED)
-g = torch.Generator()
-g.manual_seed(SEED)
-
-# Các hằng số
 MODEL_NAME = "FacebookAI/xlm-roberta-large"
 FREEZE_LAYERS = 8
 BATCH_SIZE = 16
@@ -136,8 +128,39 @@ def train_model(model, train_loader, val_loader, criterion_ce, criterion_contras
 def main():
     parser = argparse.ArgumentParser(description="Train OpinionBERT with contrastive loss")
     parser.add_argument('--use_augmenter', action='store_true', help="Enable data augmentation")
+    parser.add_argument('--seed', type=int, default=SEED, help="Random seed for reproducibility")
+    parser.add_argument('--freeze_layers', type=int, default=FREEZE_LAYERS, help="Number of layers to freeze in the BERT model")
+    parser.add_argument('--batch_size', type=int, default=BATCH_SIZE, help="Batch size for training")
+    parser.add_argument('--epochs', type=int, default=EPOCHS, help="Number of training epochs")
+    parser.add_argument('--base_lr', type=float, default=BASE_LR, help="Base learning rate for the optimizer")
+    parser.add_argument('--head_lr', type=float, default=HEAD_LR, help="Learning rate for the classification head")
+    parser.add_argument('--max_len', type=int, default=MAX_LEN, help="Maximum sequence length for tokenization")
+    parser.add_argument('--num_classes', type=int, default=NUM_CLASSES, help="Number of classes for classification")
+    parser.add_argument('--lambda_contrastive', type=float, default=LAMBDA_CONTRASTIVE, help="Weight for contrastive loss")
+    parser.add_argument('--patience', type=int, default=PATIENCE, help="Patience for early stopping")
+    parser.add_argument('--label_smoothing', type=float, default=0.1, help="Label smoothing factor for CrossEntropyLoss")
+
     args = parser.parse_args()
     
+    SEED = args.seed
+    torch.manual_seed(SEED)
+    random.seed(SEED)
+    np.random.seed(SEED)
+    g = torch.Generator()
+    g.manual_seed(SEED)
+
+    MODEL_NAME = args.model_name if hasattr(args, 'model_name') else MODEL_NAME
+    FREEZE_LAYERS = args.freeze_layers if hasattr(args, 'freeze_layers') else FREEZE_LAYERS
+    BATCH_SIZE = args.batch_size if hasattr(args, 'batch_size') else BATCH_SIZE
+    EPOCHS = args.epochs if hasattr(args, 'epochs') else EPOCHS
+    BASE_LR = args.base_lr if hasattr(args, 'base_lr') else BASE_LR
+    HEAD_LR = args.head_lr if hasattr(args, 'head_lr') else HEAD_LR
+    MAX_LEN = args.max_len if hasattr(args, 'max_len') else MAX_LEN
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    NUM_CLASSES = args.num_classes if hasattr(args, 'num_classes') else NUM_CLASSES
+    LAMBDA_CONTRASTIVE = args.lambda_contrastive if hasattr(args, 'lambda_contrastive') else LAMBDA_CONTRASTIVE
+    PATIENCE = args.patience if hasattr(args, 'patience') else PATIENCE
+
     # Load dữ liệu
     train_data = load_jsonl('data/training_data.jsonl')
     val_data = load_jsonl('data/development_data.jsonl')
@@ -163,7 +186,7 @@ def main():
         freeze_layers=FREEZE_LAYERS
     ).to(DEVICE)
 
-    criterion_ce = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    criterion_ce = torch.nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     criterion_contrastive = SupConLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=BASE_LR)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)

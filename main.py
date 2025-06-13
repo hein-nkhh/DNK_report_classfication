@@ -12,6 +12,7 @@ from src.dataset import MyDataset, load_jsonl
 from src.model import OpinionBERTWithContrastive
 import argparse
 
+SEED = 42
 MODEL_NAME = "FacebookAI/xlm-roberta-large"
 FREEZE_LAYERS = 8
 BATCH_SIZE = 16

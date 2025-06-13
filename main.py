@@ -129,6 +129,7 @@ def main():
     parser = argparse.ArgumentParser(description="Train OpinionBERT with contrastive loss")
     parser.add_argument('--use_augmenter', action='store_true', help="Enable data augmentation")
     parser.add_argument('--seed', type=int, default=SEED, help="Random seed for reproducibility")
+    parser.add_argument('--model_name', type=str, default=MODEL_NAME, help="Pretrained model name or path")
     parser.add_argument('--freeze_layers', type=int, default=FREEZE_LAYERS, help="Number of layers to freeze in the BERT model")
     parser.add_argument('--batch_size', type=int, default=BATCH_SIZE, help="Batch size for training")
     parser.add_argument('--epochs', type=int, default=EPOCHS, help="Number of training epochs")

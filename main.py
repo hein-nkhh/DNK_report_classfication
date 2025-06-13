@@ -127,78 +127,55 @@ def train_model(model, train_loader, val_loader, criterion_ce, criterion_contras
 
 def main():
     parser = argparse.ArgumentParser(description="Train OpinionBERT with contrastive loss")
-    parser.add_argument('--use_augmenter', action='store_true', help="Enable data augmentation")
-    parser.add_argument('--seed', type=int, default=42, help="Random seed for reproducibility")
-    parser.add_argument('--model_name', type=str, default=MODEL_NAME, help="Pretrained model name or path")
-    parser.add_argument('--freeze_layers', type=int, default=FREEZE_LAYERS, help="Number of layers to freeze in the BERT model")
-    parser.add_argument('--batch_size', type=int, default=BATCH_SIZE, help="Batch size for training")
-    parser.add_argument('--epochs', type=int, default=EPOCHS, help="Number of training epochs")
-    parser.add_argument('--base_lr', type=float, default=BASE_LR, help="Base learning rate for the optimizer")
-    parser.add_argument('--head_lr', type=float, default=HEAD_LR, help="Learning rate for the classification head")
-    parser.add_argument('--max_len', type=int, default=MAX_LEN, help="Maximum sequence length for tokenization")
-    parser.add_argument('--num_classes', type=int, default=NUM_CLASSES, help="Number of classes for classification")
-    parser.add_argument('--lambda_contrastive', type=float, default=LAMBDA_CONTRASTIVE, help="Weight for contrastive loss")
-    parser.add_argument('--patience', type=int, default=PATIENCE, help="Patience for early stopping")
-    parser.add_argument('--label_smoothing', type=float, default=0.1, help="Label smoothing factor for CrossEntropyLoss")
+    parser.add_argument('--use_augmenter', action='store_true')
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--model_name', type=str, default=MODEL_NAME)
+    parser.add_argument('--freeze_layers', type=int, default=FREEZE_LAYERS)
+    parser.add_argument('--batch_size', type=int, default=BATCH_SIZE)
+    parser.add_argument('--epochs', type=int, default=EPOCHS)
+    parser.add_argument('--base_lr', type=float, default=BASE_LR)
+    parser.add_argument('--head_lr', type=float, default=HEAD_LR)
+    parser.add_argument('--max_len', type=int, default=MAX_LEN)
+    parser.add_argument('--num_classes', type=int, default=NUM_CLASSES)
+    parser.add_argument('--lambda_contrastive', type=float, default=LAMBDA_CONTRASTIVE)
+    parser.add_argument('--patience', type=int, default=PATIENCE)
+    parser.add_argument('--label_smoothing', type=float, default=0.1)
 
     args = parser.parse_args()
-    
+
+    # Set seed
     SEED = args.seed
     torch.manual_seed(SEED)
     random.seed(SEED)
     np.random.seed(SEED)
-    g = torch.Generator()
-    g.manual_seed(SEED)
+    g = torch.Generator().manual_seed(SEED)
 
-    MODEL_NAME = args.model_name if hasattr(args, 'model_name') else MODEL_NAME
-    FREEZE_LAYERS = args.freeze_layers if hasattr(args, 'freeze_layers') else FREEZE_LAYERS
-    BATCH_SIZE = args.batch_size if hasattr(args, 'batch_size') else BATCH_SIZE
-    EPOCHS = args.epochs if hasattr(args, 'epochs') else EPOCHS
-    BASE_LR = args.base_lr if hasattr(args, 'base_lr') else BASE_LR
-    HEAD_LR = args.head_lr if hasattr(args, 'head_lr') else HEAD_LR
-    MAX_LEN = args.max_len if hasattr(args, 'max_len') else MAX_LEN
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    NUM_CLASSES = args.num_classes if hasattr(args, 'num_classes') else NUM_CLASSES
-    LAMBDA_CONTRASTIVE = args.lambda_contrastive if hasattr(args, 'lambda_contrastive') else LAMBDA_CONTRASTIVE
-    PATIENCE = args.patience if hasattr(args, 'patience') else PATIENCE
-
-    # Load dữ liệu
-    train_data = load_jsonl('data/training_data.jsonl')
-    val_data = load_jsonl('data/development_data.jsonl')
-
-    # Khởi tạo tokenizer và dataloader
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    # Use args directly
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     train_loader = DataLoader(
-        MyDataset(train_data, tokenizer, mode='train', use_augmenter=args.use_augmenter),
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        generator=g
-    )
+        MyDataset(load_jsonl('data/training_data.jsonl'), tokenizer, mode='train', use_augmenter=args.use_augmenter),
+        batch_size=args.batch_size, shuffle=True, generator=g)
+    
     val_loader = DataLoader(
-        MyDataset(val_data, tokenizer, mode='val'),
-        batch_size=BATCH_SIZE,
-        shuffle=False
-    )
+        MyDataset(load_jsonl('data/development_data.jsonl'), tokenizer, mode='val'),
+        batch_size=args.batch_size, shuffle=False)
 
-    # Khởi tạo model, loss, optimizer, scheduler
     model = OpinionBERTWithContrastive(
-        model_name=MODEL_NAME,
-        num_classes=NUM_CLASSES,
-        freeze_layers=FREEZE_LAYERS
+        model_name=args.model_name,
+        num_classes=args.num_classes,
+        freeze_layers=args.freeze_layers
     ).to(DEVICE)
 
     criterion_ce = torch.nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     criterion_contrastive = SupConLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=BASE_LR)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.base_lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2)
 
-    # Huấn luyện
-    best_model_path = train_model(
-        model, train_loader, val_loader, criterion_ce, criterion_contrastive,
-        optimizer, scheduler, EPOCHS, PATIENCE
-    )
+    best_model_path = train_model(model, train_loader, val_loader, criterion_ce, criterion_contrastive,
+                                   optimizer, scheduler, args.epochs, args.patience)
 
     print(f"Best model saved at: {best_model_path}")
+
 
 if __name__ == "__main__":
     main()

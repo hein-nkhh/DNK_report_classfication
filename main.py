@@ -12,7 +12,6 @@ from src.dataset import MyDataset, load_jsonl
 from src.model import OpinionBERTWithContrastive
 import argparse
 
-SEED = 42
 MODEL_NAME = "FacebookAI/xlm-roberta-large"
 FREEZE_LAYERS = 8
 BATCH_SIZE = 16
@@ -129,7 +128,7 @@ def train_model(model, train_loader, val_loader, criterion_ce, criterion_contras
 def main():
     parser = argparse.ArgumentParser(description="Train OpinionBERT with contrastive loss")
     parser.add_argument('--use_augmenter', action='store_true', help="Enable data augmentation")
-    parser.add_argument('--seed', type=int, default=SEED, help="Random seed for reproducibility")
+    parser.add_argument('--seed', type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument('--model_name', type=str, default=MODEL_NAME, help="Pretrained model name or path")
     parser.add_argument('--freeze_layers', type=int, default=FREEZE_LAYERS, help="Number of layers to freeze in the BERT model")
     parser.add_argument('--batch_size', type=int, default=BATCH_SIZE, help="Batch size for training")
